@@ -10,10 +10,7 @@
 (local lume (require :lume))
 (local flux (require :flux))
 
-(local scene-key-map { })
-(local movement-key-map { :left [:x -1] :right [:x 1] :up [:y -1] :down [:y 1] })
-
-(local player { :x 32 :y 32 :radius 0 :opacity 1 :speed 50 })
+(local player { :x 32 :y 32 :radius 0 :opacity 1 :speed 100 })
 (local ring { :radius 500 :opacity 1 })
 (local gamestate { :status :STARTING :status-hooks [] })
 (local gong (la.newSource "bowl.wav" :static))
@@ -44,10 +41,10 @@
         (table.remove (. gamestate callback-type) index)
         (table.remove (. gamestate callback-type))))
 
-(fn run-callbacks [list-of-callbacks ...]
+(fn run-callbacks [list-of-callbacks]
     (each [key callback (pairs list-of-callbacks)]
           (when (= (type callback) :function)
-            (callback (unpack [...])))))
+            (callback))))
 
 (fn set-gamestate-status [state]
     (set gamestate.status state)
@@ -56,8 +53,9 @@
 (fn quit-game [] (set-gamestate-status :STOPPING))
 
 (fn move-player [axis direction dt]
+    (print axis direction dt)
+    
     (: reluctance :stop)
-    (print dt)
     (let [[width height] [(lg.getDimensions)]]
       (local new-value (+ (. player axis) (* direction (* player.speed player.opacity) dt)))
       (when (not (= gamestate.status :COMPLETE))
@@ -91,12 +89,15 @@
 
 (fn scene-update [dt]
     (flux.update dt)
-    (each [key action (pairs (lume.extend scene-key-map movement-key-map))]
-          (table.insert action dt)
-          (when (and (lk.isDown key) (> ring.radius player.radius))
-            (if (= (type action) :function)
-                (action)
-                (move-player (unpack action))))))
+    (when (> ring.radius player.radius)
+      (if (lk.isDown :left)
+          (move-player :x -1 dt)
+          (lk.isDown :right)
+          (move-player :x 1 dt)
+          (lk.isDown :up)
+          (move-player :y -1 dt)
+          (lk.isDown :down)
+          (move-player :y 1 dt))))
 
 (fn scene-draw []
     (lg.setBackgroundColor 0.917 0.917 0.917)

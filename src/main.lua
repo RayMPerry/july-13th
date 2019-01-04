@@ -1,9 +1,7 @@
 local lg, lk, le, la = love.graphics, love.keyboard, love.event, love.audio
 local lume = require("lume")
 local flux = require("flux")
-local scene_key_map = {}
-local movement_key_map = {down = {"y", 1}, left = {"x", -1}, right = {"x", 1}, up = {"y", -1}}
-local player = {opacity = 1, radius = 0, speed = 50, x = 32, y = 32}
+local player = {opacity = 1, radius = 0, speed = 100, x = 32, y = 32}
 local ring = {opacity = 1, radius = 500}
 local gamestate = {["status-hooks"] = {}, status = "STARTING"}
 local gong = la.newSource("bowl.wav", "static")
@@ -32,14 +30,14 @@ local function unregister_callback(callback_type, index)
     return table.remove(gamestate[callback_type])
   end
 end
-local function run_callbacks(list_of_callbacks, ...)
+local function run_callbacks(list_of_callbacks)
   for key, callback in pairs(list_of_callbacks) do
-    local function _0_(...)
+    local function _0_()
       if (type(callback) == "function") then
-        return callback(unpack({...}))
+        return callback()
       end
     end
-    _0_(...)
+    _0_()
   end
   return nil
 end
@@ -51,8 +49,8 @@ local function quit_game()
   return set_gamestate_status("STOPPING")
 end
 local function move_player(axis, direction, dt)
+  print(axis, direction, dt)
   reluctance:stop()
-  print(dt)
   do
     local _0_ = {lg.getDimensions()}
     local width = _0_[1]
@@ -91,20 +89,17 @@ ring.draw = function()
 end
 local function scene_update(dt)
   flux.update(dt)
-  for key, action in pairs(lume.extend(scene_key_map, movement_key_map)) do
-    table.insert(action, dt)
-    local function _0_()
-      if (lk.isDown(key) and (ring.radius > player.radius)) then
-        if (type(action) == "function") then
-          return action()
-        else
-          return move_player(unpack(action))
-        end
-      end
+  if (ring.radius > player.radius) then
+    if lk.isDown("left") then
+      return move_player("x", -1, dt)
+    elseif lk.isDown("right") then
+      return move_player("x", 1, dt)
+    elseif lk.isDown("up") then
+      return move_player("y", -1, dt)
+    elseif lk.isDown("down") then
+      return move_player("y", 1, dt)
     end
-    _0_()
   end
-  return nil
 end
 local function scene_draw()
   lg.setBackgroundColor(0.91700000000000004, 0.91700000000000004, 0.91700000000000004)
