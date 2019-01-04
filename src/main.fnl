@@ -13,6 +13,7 @@
 (local player { :x 32 :y 32 :radius 0 :opacity 1 :speed 100 })
 (local ring { :radius 500 :opacity 1 })
 (local gamestate { :status :STARTING :status-hooks [] })
+
 (local gong (la.newSource "bowl.wav" :static))
 (: gong :setVolume 0.8)
 
@@ -42,7 +43,7 @@
         (table.remove (. gamestate callback-type))))
 
 (fn run-callbacks [list-of-callbacks]
-    (each [key callback (pairs list-of-callbacks)]
+    (each [_ callback (ipairs list-of-callbacks)]
           (when (= (type callback) :function)
             (callback))))
 
@@ -53,8 +54,6 @@
 (fn quit-game [] (set-gamestate-status :STOPPING))
 
 (fn move-player [axis direction dt]
-    (print axis direction dt)
-    
     (: reluctance :stop)
     (let [[width height] [(lg.getDimensions)]]
       (local new-value (+ (. player axis) (* direction (* player.speed player.opacity) dt)))
@@ -89,15 +88,14 @@
 
 (fn scene-update [dt]
     (flux.update dt)
-    (when (> ring.radius player.radius)
-      (if (lk.isDown :left)
-          (move-player :x -1 dt)
-          (lk.isDown :right)
-          (move-player :x 1 dt)
-          (lk.isDown :up)
-          (move-player :y -1 dt)
-          (lk.isDown :down)
-          (move-player :y 1 dt))))
+    (when (lk.isDown :left)
+      (move-player :x -1 dt))
+    (when (lk.isDown :right)
+      (move-player :x 1 dt))
+    (when (lk.isDown :up)
+      (move-player :y -1 dt))
+    (when (lk.isDown :down)
+        (move-player :y 1 dt)))
 
 (fn scene-draw []
     (lg.setBackgroundColor 0.917 0.917 0.917)
@@ -110,7 +108,6 @@
 
 (local main-scene { :update scene-update :draw scene-draw :keypressed scene-keypressed })
 
-(local global-key-map { })
 ;; ===============
 
 (fn love.keypressed [key]
@@ -162,11 +159,6 @@
 
 (fn love.update [dt]
     (when (not (= gamestate.status :PAUSED))
-      (each [key callback (pairs global-key-map)]
-            (when (and (lk.isDown key)
-                       (= (type callback) :function))
-              (callback)))
-      
       (when (and (= gamestate.status :COMPLETE) (: gong :isPlaying))
         (: gong :setVolume (- (: gong :getVolume) (/ dt 4)))
         (when (<= (: gong :getVolume) 0.01)

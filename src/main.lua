@@ -31,7 +31,7 @@ local function unregister_callback(callback_type, index)
   end
 end
 local function run_callbacks(list_of_callbacks)
-  for key, callback in pairs(list_of_callbacks) do
+  for _, callback in ipairs(list_of_callbacks) do
     local function _0_()
       if (type(callback) == "function") then
         return callback()
@@ -49,7 +49,6 @@ local function quit_game()
   return set_gamestate_status("STOPPING")
 end
 local function move_player(axis, direction, dt)
-  print(axis, direction, dt)
   reluctance:stop()
   do
     local _0_ = {lg.getDimensions()}
@@ -89,16 +88,26 @@ ring.draw = function()
 end
 local function scene_update(dt)
   flux.update(dt)
-  if (ring.radius > player.radius) then
+  local function _0_()
     if lk.isDown("left") then
       return move_player("x", -1, dt)
-    elseif lk.isDown("right") then
-      return move_player("x", 1, dt)
-    elseif lk.isDown("up") then
-      return move_player("y", -1, dt)
-    elseif lk.isDown("down") then
-      return move_player("y", 1, dt)
     end
+  end
+  _0_()
+  local function _1_()
+    if lk.isDown("right") then
+      return move_player("x", 1, dt)
+    end
+  end
+  _1_()
+  local function _2_()
+    if lk.isDown("up") then
+      return move_player("y", -1, dt)
+    end
+  end
+  _2_()
+  if lk.isDown("down") then
+    return move_player("y", 1, dt)
   end
 end
 local function scene_draw()
@@ -118,7 +127,6 @@ local function scene_keypressed(key)
   end
 end
 local main_scene = {draw = scene_draw, keypressed = scene_keypressed, update = scene_update}
-local global_key_map = {}
 love.keypressed = function(key)
   local function _0_()
     if (key == "p") then
@@ -180,14 +188,6 @@ love.load = function()
 end
 love.update = function(dt)
   if not (gamestate.status == "PAUSED") then
-    for key, callback in pairs(global_key_map) do
-      local function _0_()
-        if (lk.isDown(key) and (type(callback) == "function")) then
-          return callback()
-        end
-      end
-      _0_()
-    end
     local function _0_()
       if ((gamestate.status == "COMPLETE") and gong:isPlaying()) then
         gong:setVolume((gong:getVolume() - (dt / 4)))
