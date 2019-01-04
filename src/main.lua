@@ -122,22 +122,9 @@ local function scene_keypressed(key)
     end
   end
   _0_()
-  if (key == "c") then
-    return set_gamestate_status("COMPLETE")
-  end
 end
 local main_scene = {draw = scene_draw, keypressed = scene_keypressed, update = scene_update}
 love.keypressed = function(key)
-  local function _0_()
-    if (key == "p") then
-      if (gamestate.status == "RUNNING") then
-        return set_gamestate_status("PAUSED")
-      else
-        return set_gamestate_status("RUNNING")
-      end
-    end
-  end
-  _0_()
   local function _1_()
     if (key == "q") then
       return quit_game()
