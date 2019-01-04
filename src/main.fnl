@@ -15,7 +15,7 @@
 
 (local player { :x 32 :y 32 :radius 0 :opacity 1 :speed 50 })
 (local ring { :radius 500 :opacity 1 })
-(local gamestate { :status :STARTING :status-hooks [] :timers [] :load [] :update [] :draw [] :keypressed [] })
+(local gamestate { :status :STARTING :status-hooks [] })
 (local gong (la.newSource "bowl.wav" :static))
 (: gong :setVolume 0.8)
 
@@ -57,6 +57,7 @@
 
 (fn move-player [axis direction dt]
     (: reluctance :stop)
+    (print dt)
     (let [[width height] [(lg.getDimensions)]]
       (local new-value (+ (. player axis) (* direction (* player.speed player.opacity) dt)))
       (when (not (= gamestate.status :COMPLETE))
@@ -113,82 +114,68 @@
 
 (fn love.keypressed [key]
     (when (= key :p)
-        (if (= gamestate.status :RUNNING)
-            (set-gamestate-status :PAUSED)
-            (set-gamestate-status :RUNNING)))
+      (if (= gamestate.status :RUNNING)
+          (set-gamestate-status :PAUSED)
+          (set-gamestate-status :RUNNING)))
     (when (= key :q) (quit-game))
-    (run-callbacks gamestate.keypressed key))
+    (main-scene.keypressed key))
 
 (fn love.load [] 
     (register-callback
-     :load
-     (fn first-load []
-         (register-callback
-          :status-hooks
-          (fn game-started []
-              (when (= gamestate.status :STARTED)
-                (set-gamestate-status :RUNNING)
-                (: (flux.to player 1 { :radius 28 })
-                   :after
-                   ring 1 { :radius (* 32 1.15) }))))
+     :status-hooks
+     (fn game-started []
+         (when (= gamestate.status :STARTED)
+           (set-gamestate-status :RUNNING)
+           (: (flux.to player 1 { :radius 28 })
+              :after
+              ring 1 { :radius (* 32 1.15) }))))
 
-         (register-callback
-          :status-hooks
-          (fn game-stopping []
-              (when (= gamestate.status :STOPPING)
-                (set-gamestate-status :STOPPED))))
+    (register-callback
+     :status-hooks
+     (fn game-stopping []
+         (when (= gamestate.status :STOPPING)
+           (set-gamestate-status :STOPPED))))
 
-         (register-callback
-          :status-hooks
-          (fn game-stopped []
-              (when (= gamestate.status :STOPPED)
-                (le.quit))))
+    (register-callback
+     :status-hooks
+     (fn game-stopped []
+         (when (= gamestate.status :STOPPED)
+           (le.quit))))
 
-         (register-callback
-          :status-hooks
-          (fn game-complete []
-              (when (= gamestate.status :COMPLETE)
-                (: reluctance :stop)
-                (la.play gong)
-                (flux.to ring 2 { :opacity 0 })
-                (flux.to player 2 { :opacity 0 }))))
-              
-         (register-callback
-          :update
-          (fn key-handler []
-              (each [key callback (pairs global-key-map)]
-                    (when (and (lk.isDown key)
-                               (= (type callback) :function))
-                      (callback)))))
+    (register-callback
+     :status-hooks
+     (fn game-complete []
+         (when (= gamestate.status :COMPLETE)
+           (: reluctance :stop)
+           (la.play gong)
+           (flux.to ring 2 { :opacity 0 })
+           (flux.to player 2 { :opacity 0 }))))
 
-         (register-callback
-          :update
-          (fn upon-completion [dt]
-              (when (and (= gamestate.status :COMPLETE) (: gong :isPlaying))
-                (: gong :setVolume (- (: gong :getVolume) (/ dt 4)))
-                (when (<= (: gong :getVolume) 0.01)
-                  (: gong :stop)
-                  (quit-game)))))
-
-         (let [[width height] [(lg.getDimensions)]]
-           (set ring.x (math.floor (/ width 2)))
-           (set ring.y (math.floor (/ height 2)))
-           (set player.x ring.x)
-           (set player.y ring.y))
-
-         (register-callback :update main-scene.update)
-         (register-callback :draw main-scene.draw)
-         (register-callback :keypressed main-scene.keypressed)
-         
-         (set-gamestate-status :STARTED)))
+    (let [[width height] [(lg.getDimensions)]]
+      (set ring.x (math.floor (/ width 2)))
+      (set ring.y (math.floor (/ height 2)))
+      (set player.x ring.x)
+      (set player.y ring.y))
     
-    (run-callbacks gamestate.load))
+    (set-gamestate-status :STARTED))
 
 (fn love.update [dt]
     (when (not (= gamestate.status :PAUSED))
-      (run-callbacks gamestate.update dt)))
+      (each [key callback (pairs global-key-map)]
+            (when (and (lk.isDown key)
+                       (= (type callback) :function))
+              (callback)))
+      
+      (when (and (= gamestate.status :COMPLETE) (: gong :isPlaying))
+        (: gong :setVolume (- (: gong :getVolume) (/ dt 4)))
+        (when (<= (: gong :getVolume) 0.01)
+          (: gong :stop)
+          (quit-game)))
 
-(fn love.draw [] (run-callbacks gamestate.draw))
+      (main-scene.update dt)))
+
+(fn love.draw []
+    (main-scene.draw))
 
 (fn love.keyreleased []
     (when (not (= gamestate.status :COMPLETE))

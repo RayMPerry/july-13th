@@ -5,7 +5,7 @@ local scene_key_map = {}
 local movement_key_map = {down = {"y", 1}, left = {"x", -1}, right = {"x", 1}, up = {"y", -1}}
 local player = {opacity = 1, radius = 0, speed = 50, x = 32, y = 32}
 local ring = {opacity = 1, radius = 500}
-local gamestate = {["status-hooks"] = {}, draw = {}, keypressed = {}, load = {}, status = "STARTING", timers = {}, update = {}}
+local gamestate = {["status-hooks"] = {}, status = "STARTING"}
 local gong = la.newSource("bowl.wav", "static")
 gong:setVolume(0.80000000000000004)
 local function start_reluctance()
@@ -52,6 +52,7 @@ local function quit_game()
 end
 local function move_player(axis, direction, dt)
   reluctance:stop()
+  print(dt)
   do
     local _0_ = {lg.getDimensions()}
     local width = _0_[1]
@@ -140,51 +141,59 @@ love.keypressed = function(key)
     end
   end
   _1_()
-  return run_callbacks(gamestate.keypressed, key)
+  return main_scene.keypressed(key)
 end
 love.load = function()
-  local function first_load()
-    local function game_started()
-      if (gamestate.status == "STARTED") then
-        set_gamestate_status("RUNNING")
-        return flux.to(player, 1, {radius = 28}):after(ring, 1, {radius = (32 * 1.1499999999999999)})
-      end
+  local function game_started()
+    if (gamestate.status == "STARTED") then
+      set_gamestate_status("RUNNING")
+      return flux.to(player, 1, {radius = 28}):after(ring, 1, {radius = (32 * 1.1499999999999999)})
     end
-    register_callback("status-hooks", game_started)
-    local function game_stopping()
-      if (gamestate.status == "STOPPING") then
-        return set_gamestate_status("STOPPED")
-      end
+  end
+  register_callback("status-hooks", game_started)
+  local function game_stopping()
+    if (gamestate.status == "STOPPING") then
+      return set_gamestate_status("STOPPED")
     end
-    register_callback("status-hooks", game_stopping)
-    local function game_stopped()
-      if (gamestate.status == "STOPPED") then
-        return le.quit()
-      end
+  end
+  register_callback("status-hooks", game_stopping)
+  local function game_stopped()
+    if (gamestate.status == "STOPPED") then
+      return le.quit()
     end
-    register_callback("status-hooks", game_stopped)
-    local function game_complete()
-      if (gamestate.status == "COMPLETE") then
-        reluctance:stop()
-        la.play(gong)
-        flux.to(ring, 2, {opacity = 0})
-        return flux.to(player, 2, {opacity = 0})
-      end
+  end
+  register_callback("status-hooks", game_stopped)
+  local function game_complete()
+    if (gamestate.status == "COMPLETE") then
+      reluctance:stop()
+      la.play(gong)
+      flux.to(ring, 2, {opacity = 0})
+      return flux.to(player, 2, {opacity = 0})
     end
-    register_callback("status-hooks", game_complete)
-    local function key_handler()
-      for key, callback in pairs(global_key_map) do
-        local function _0_()
-          if (lk.isDown(key) and (type(callback) == "function")) then
-            return callback()
-          end
+  end
+  register_callback("status-hooks", game_complete)
+  do
+    local _0_ = {lg.getDimensions()}
+    local width = _0_[1]
+    local height = _0_[2]
+    ring.x = math.floor((width / 2))
+    ring.y = math.floor((height / 2))
+    player.x = ring.x
+    player.y = ring.y
+  end
+  return set_gamestate_status("STARTED")
+end
+love.update = function(dt)
+  if not (gamestate.status == "PAUSED") then
+    for key, callback in pairs(global_key_map) do
+      local function _0_()
+        if (lk.isDown(key) and (type(callback) == "function")) then
+          return callback()
         end
-        _0_()
       end
-      return nil
+      _0_()
     end
-    register_callback("update", key_handler)
-    local function upon_completion(dt)
+    local function _0_()
       if ((gamestate.status == "COMPLETE") and gong:isPlaying()) then
         gong:setVolume((gong:getVolume() - (dt / 4)))
         if (gong:getVolume() <= 0.01) then
@@ -193,31 +202,12 @@ love.load = function()
         end
       end
     end
-    register_callback("update", upon_completion)
-    do
-      local _0_ = {lg.getDimensions()}
-      local width = _0_[1]
-      local height = _0_[2]
-      ring.x = math.floor((width / 2))
-      ring.y = math.floor((height / 2))
-      player.x = ring.x
-      player.y = ring.y
-    end
-    register_callback("update", main_scene.update)
-    register_callback("draw", main_scene.draw)
-    register_callback("keypressed", main_scene.keypressed)
-    return set_gamestate_status("STARTED")
-  end
-  register_callback("load", first_load)
-  return run_callbacks(gamestate.load)
-end
-love.update = function(dt)
-  if not (gamestate.status == "PAUSED") then
-    return run_callbacks(gamestate.update, dt)
+    _0_()
+    return main_scene.update(dt)
   end
 end
 love.draw = function()
-  return run_callbacks(gamestate.draw)
+  return main_scene.draw()
 end
 love.keyreleased = function()
   if not (gamestate.status == "COMPLETE") then
